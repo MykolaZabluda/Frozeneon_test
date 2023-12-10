@@ -23,3 +23,5 @@ export type Library = {
     name: string;
     version: string[];
 };
+
+export type PopupData = Library & { isActivePopup: boolean; };

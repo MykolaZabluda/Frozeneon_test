@@ -1,21 +1,26 @@
 <template>
-  <div class="input-wrapper">
-    <input v-model="searchText" @change="emitSearchValue(searchText)" placeholder="write...">
-  </div>
+  <v-text-field
+      v-model="searchText"
+      class="w-50 mx-auto"
+      label="Write your request..."
+      clearable="true"
+      @change="store.state.searchValue = searchText"
+      @click:clear="store.state.searchValue = ''"
+  ></v-text-field>
 </template>
 
 <script lang="ts">
 import store from '@/store';
 
 export default {
-  data() {
-    return {
-      searchText: String(),
+  computed: {
+    store() {
+      return store
     }
   },
-  methods: {
-    emitSearchValue(value: string): void {
-      store.state.searchValue = value;
+  data() {
+    return {
+      searchText: String(''),
     }
   },
 }

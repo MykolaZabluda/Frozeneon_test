@@ -1,25 +1,26 @@
 <template>
-  <div class="table-wrapper">
-    <table class="table">
-      <tr>
-        <th>name</th>
-        <th>last version</th>
-        <th>author</th>
-      </tr>
-      <tr class="table-row" v-for="library in libraries" :key="library">
-        <td class="table-column">{{ library.name }}</td>
-        <td class="table-column">{{ library.lastversion }}</td>
-        <td class="table-column">{{ library.author }}</td>
-      </tr>
-    </table>
-  </div>
+  <v-alert v-if="isErrorAlert" type="error">
+    {{ errorMessage }}
+  </v-alert>
+  <v-data-table
+      v-if="libraries.length"
+      :headers="headers"
+      :items="libraries"
+      :items-per-page="10"
+      @click:row="handleClick"
+  >
+  </v-data-table>
+  <div v-else>No data available</div>
 </template>
 
 <script lang="ts">
-import { mapGetters } from "vuex";
-import {Library} from "@/types/libraries";
+import {mapGetters} from "vuex";
+import {Library, PopupData} from "@/types/libraries";
+import {Headers} from "@/types/data-table";
 import axios from "axios";
+import store from '@/store';
 import {defineComponent} from "vue";
+import {setDefaultHeaders} from "@/helpers/table-helpers";
 
 export default defineComponent({
   computed: {
@@ -27,53 +28,44 @@ export default defineComponent({
   },
   data() {
     return {
+      headers: new Array<Headers>(),
       libraries: new Array<Library>(),
+      isErrorAlert: false,
+      errorMessage: String(''),
     }
   },
   watch: {
     getSearchValue: {
       deep: true,
       handler(text: string) {
-        this.getLibraries(text);
+        !text ? this.libraries = [] : this.getLibraries(text);
       },
     },
   },
   methods: {
     async getLibraries(searchData: string): Promise<void> {
-      try {
-        const response: { data: Library[] } = await axios.get(`http://api.jsdelivr.com/v1/${searchData}/libraries`);
-        this.libraries = response.data;
-      } catch (error) {
-        console.error('Error fetching data:', error);
-      }
+      await axios.get(`http://api.jsdelivr.com/v1/${searchData}/libraries`)
+          .then((response: { data: Library[] }) =>{
+            this.headers = setDefaultHeaders();
+            this.libraries = response.data;
+          }).catch((error) => this.showErrorMessage(error.response.data.message));
     },
+    handleClick(event: PointerEvent, row: any): void {
+      const popup: PopupData = {
+        ...this.libraries[row.item.$loki - 1],
+        ...{ isActivePopup: true }
+      }
+      store.state.popupRowData = Object.assign({}, popup);
+    },
+    showErrorMessage(error: string): void {
+      this.isErrorAlert = true;
+      this.errorMessage = error;
+
+      setTimeout(() => this.isErrorAlert = false, 2000);
+    }
   },
 });
 </script>
 
 <style scoped lang="scss">
-.table-wrapper {
-  .table {
-    margin: auto;
-
-    &-row {
-      &:first-child {
-        &-column {
-          &:first-child {
-            border-radius: 8px 0 0 0;
-          }
-
-          &:last-child {
-            border-radius: 0 8px 0 0;
-          }
-        }
-      }
-    }
-
-    &-column {
-      border: 1px solid #000;
-      padding: 8px;
-    }
-  }
-}
 </style>
